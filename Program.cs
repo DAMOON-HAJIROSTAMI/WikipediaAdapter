@@ -23,13 +23,13 @@ app.MapGet("/suggest", async (HttpContext context) =>
         );
     }
 
-    var apiUrl = $"https://en.wikipedia.org/w/api.php?action=opensearch&format=json&search={Uri.EscapeDataString(query)}";
+    var url = $"https://en.wikipedia.org/w/api.php?action=opensearch&format=json&search={Uri.EscapeDataString(query)}";
 
     try
     {
-        var response = await http.GetStringAsync(apiUrl);
-        using var doc = JsonDocument.Parse(response);
-        var root = doc.RootElement;
+        var response = await http.GetStringAsync(url);
+        using var json = JsonDocument.Parse(response);
+        var root = json.RootElement;
 
         if (root.GetArrayLength() < 4)
         {
@@ -41,7 +41,7 @@ app.MapGet("/suggest", async (HttpContext context) =>
 
         var titles = root[1];
         var links = root[3];
-        var suggestions = new List<object>();
+        var suggestions = new List<Dictionary<string, object>>();
 
         for (int i = 0; i < titles.GetArrayLength(); i++)
         {
@@ -50,15 +50,15 @@ app.MapGet("/suggest", async (HttpContext context) =>
 
             if (!string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(link))
             {
-                suggestions.Add(new
+                suggestions.Add(new Dictionary<string, object>
                 {
-                    Attributes = new Dictionary<string, string>
+                    ["Attributes"] = new Dictionary<string, string>
                     {
                         ["url"] = link,
                         ["query"] = title,
                         ["previewPaneUrl"] = link
                     },
-                    Text = title
+                    ["Text"] = title
                 });
             }
         }
