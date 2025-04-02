@@ -17,7 +17,10 @@ app.MapGet("/suggest", async (HttpContext context) =>
 
     if (string.IsNullOrWhiteSpace(query))
     {
-        return Results.Json(new { Suggestions = Array.Empty<object>() });
+        return Results.Json(
+            new { Suggestions = Array.Empty<object>() },
+            new JsonSerializerOptions { PropertyNamingPolicy = null } // 🛠 Preserve casing
+        );
     }
 
     var url = $"https://en.wikipedia.org/w/api.php?action=opensearch&format=json&search={Uri.EscapeDataString(query)}";
@@ -28,7 +31,10 @@ app.MapGet("/suggest", async (HttpContext context) =>
 
     if (root.GetArrayLength() < 4)
     {
-        return Results.Json(new { Suggestions = Array.Empty<object>() });
+        return Results.Json(
+            new { Suggestions = Array.Empty<object>() },
+            new JsonSerializerOptions { PropertyNamingPolicy = null }
+        );
     }
 
     var titles = root[1];
@@ -55,7 +61,10 @@ app.MapGet("/suggest", async (HttpContext context) =>
         }
     }
 
-    return Results.Json(new { Suggestions = suggestions });
+    return Results.Json(
+        new { Suggestions = suggestions },
+        new JsonSerializerOptions { PropertyNamingPolicy = null } // ✅ Critical fix
+    );
 });
 
 app.Run("http://0.0.0.0:5000");
