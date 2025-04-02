@@ -1,22 +1,13 @@
-# Use official .NET SDK image to build the app
+# Use official .NET SDK image
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+WORKDIR /app
+
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY . .
+RUN dotnet publish -c Release -o /app
+
+FROM base AS final
 WORKDIR /app
-
-# Copy csproj and restore as distinct layers
-COPY *.csproj ./
-RUN dotnet restore
-
-# Copy everything else and build
-COPY . ./
-RUN dotnet publish -c Release -o out
-
-# Use official runtime image to run the app
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
-WORKDIR /app
-COPY --from=build /app/out .
-
-# Expose port 5000
-ENV ASPNETCORE_URLS=http://+:5000
-EXPOSE 5000
-
+COPY --from=build /app .
 ENTRYPOINT ["dotnet", "WikipediaAdapter.dll"]
