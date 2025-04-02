@@ -19,52 +19,59 @@ app.MapGet("/suggest", async (HttpContext context) =>
     {
         return Results.Json(
             new { Suggestions = Array.Empty<object>() },
-            new JsonSerializerOptions { PropertyNamingPolicy = null } // 🛠 Preserve casing
-        );
-    }
-
-    var url = $"https://en.wikipedia.org/w/api.php?action=opensearch&format=json&search={Uri.EscapeDataString(query)}";
-    var response = await http.GetStringAsync(url);
-
-    using var json = JsonDocument.Parse(response);
-    var root = json.RootElement;
-
-    if (root.GetArrayLength() < 4)
-    {
-        return Results.Json(
-            new { Suggestions = Array.Empty<object>() },
             new JsonSerializerOptions { PropertyNamingPolicy = null }
         );
     }
 
-    var titles = root[1];
-    var links = root[3];
-    var suggestions = new List<object>();
+    var apiUrl = $"https://en.wikipedia.org/w/api.php?action=opensearch&format=json&search={Uri.EscapeDataString(query)}";
 
-    for (int i = 0; i < titles.GetArrayLength(); i++)
+    try
     {
-        var title = titles[i].GetString();
-        var link = links[i].GetString();
+        var response = await http.GetStringAsync(apiUrl);
+        using var doc = JsonDocument.Parse(response);
+        var root = doc.RootElement;
 
-        if (!string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(link))
+        if (root.GetArrayLength() < 4)
         {
-            suggestions.Add(new
-            {
-                Attributes = new
-                {
-                    url = link,
-                    query = title,
-                    previewPaneUrl = link
-                },
-                Text = title
-            });
+            return Results.Json(
+                new { Suggestions = Array.Empty<object>() },
+                new JsonSerializerOptions { PropertyNamingPolicy = null }
+            );
         }
-    }
 
-    return Results.Json(
-        new { Suggestions = suggestions },
-        new JsonSerializerOptions { PropertyNamingPolicy = null } // ✅ Critical fix
-    );
+        var titles = root[1];
+        var links = root[3];
+        var suggestions = new List<object>();
+
+        for (int i = 0; i < titles.GetArrayLength(); i++)
+        {
+            string title = titles[i].GetString();
+            string link = links[i].GetString();
+
+            if (!string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(link))
+            {
+                suggestions.Add(new
+                {
+                    Attributes = new Dictionary<string, string>
+                    {
+                        ["url"] = link,
+                        ["query"] = title,
+                        ["previewPaneUrl"] = link
+                    },
+                    Text = title
+                });
+            }
+        }
+
+        return Results.Json(
+            new { Suggestions = suggestions },
+            new JsonSerializerOptions { PropertyNamingPolicy = null }
+        );
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Adapter error: {ex.Message}");
+    }
 });
 
 app.Run("http://0.0.0.0:5000");
