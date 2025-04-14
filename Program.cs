@@ -1,4 +1,3 @@
-// Wikipedia Adapter API for Search Provider (Fixed version)
 using System;
 using System.Net.Http;
 using System.Text.Json;
@@ -9,7 +8,24 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ✅ Add CORS services
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("https://www.bing.com")
+              .AllowCredentials()
+              .WithMethods("GET")
+              .WithHeaders("Content-Type");
+    });
+});
+
 var app = builder.Build();
+
+// ✅ Enable CORS
+app.UseCors();
+
 HttpClient http = new HttpClient();
 
 app.MapGet("/suggest", async (HttpContext context) =>
@@ -70,6 +86,16 @@ app.MapGet("/suggest", async (HttpContext context) =>
         PropertyNamingPolicy = null,
         DictionaryKeyPolicy = null
     });
+});
+
+// ✅ Also handle OPTIONS preflight requests
+app.MapMethods("/suggest", new[] { "OPTIONS" }, (HttpContext context) =>
+{
+    context.Response.Headers.Add("Access-Control-Allow-Origin", "https://www.bing.com");
+    context.Response.Headers.Add("Access-Control-Allow-Credentials", "true");
+    context.Response.Headers.Add("Access-Control-Allow-Methods", "GET");
+    context.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type");
+    return Results.Ok();
 });
 
 app.Run("http://0.0.0.0:5000");
